@@ -4,6 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from math import sqrt
 from os import path, mkdir
+#from torch_geometric.utils.convert import from_networkx
 
 
 class MakeGraph:
@@ -106,12 +107,13 @@ class MakeGraph:
 
         return nodes
 
-    def graph(self):
+    def graph(self, image='no'):
 
         """
             graph generates a networkx.Graph() from nuclear position (with staining intensity) 'Preprocessing' object.
 
             :self: Preprocessing Object described above
+            :image: string of 'yes' or 'no' based on if you want an image of your graph returned
 
             :return: 1. networkx.Graph() representing nuclear position (with staining intensity)
                      2. PNG image file of 2D graph network with node weights represented as color and/or size of node
@@ -121,38 +123,45 @@ class MakeGraph:
         graph = nx.Graph()
         graph.add_nodes_from(self.addnodes())
         graph.add_edges_from(self.addedges())
-        pos = nx.get_node_attributes(graph, 'pos')
-        outpath = f'{self.datadir}/GraphImages/{self.filename}.png'
+        #geograph = from_networkx(graph)
 
-        if len(self.nodeweight) == 2:
-            # if there are two variables associated with a single node (i.e. GATA3 & CK5 expression),
-            # their data can be stored in two variable types 'size' and 'color' of the node
-            size = nx.get_node_attributes(graph, 'size')
-            weight = nx.get_node_attributes(graph, 'weight')
-            # graph is displayed, saved, and returned as networkx.Graph object
-            nx.draw(graph, pos, node_color=list(weight.values()), node_size=list(size.values()))
-            if path.exists(f'{self.datadir}/GraphImages'):
-                plt.savefig(outpath, format="PNG")
-                return graph
+        if image == 'yes' or image == 'Yes':
+
+            pos = nx.get_node_attributes(graph, 'pos')
+            outpath = f'{self.datadir}/GraphImages/{self.filename}.png'
+
+            if len(self.nodeweight) == 2:
+                # if there are two variables associated with a single node (i.e. GATA3 & CK5 expression),
+                # their data can be stored in two variable types 'size' and 'color' of the node
+                size = nx.get_node_attributes(graph, 'size')
+                weight = nx.get_node_attributes(graph, 'weight')
+                # graph is displayed, saved, and returned as networkx.Graph object
+                nx.draw(graph, pos, node_color=list(weight.values()), node_size=list(size.values()))
+                if path.exists(f'{self.datadir}/GraphImages'):
+                    plt.savefig(outpath, format="PNG")
+                    return graph
+                else:
+                    mkdir(f'{self.datadir}/GraphImages')
+                    plt.savefig(outpath, format="PNG")
+                    return graph
+
+            elif len(self.nodeweight) == 1:
+                # if there is only one variable associated with each node (i.e. p16 expression)
+                # the data will be expressed as a variance in 'color' between each node in the graph
+                weight = nx.get_node_attributes(graph, 'weight')
+                # graph is displayed, saved, and returned as networkx.Graph object
+                nx.draw(graph, pos, node_color=list(weight.values()))
+
+                if path.exists(f'{self.datadir}/GraphImages'):
+                    plt.savefig(outpath, format="PNG")
+                    return graph
+                else:
+                    mkdir(f'{self.datadir}/GraphImages')
+                    plt.savefig(outpath, format="PNG")
+                    return graph
+
             else:
-                mkdir(f'{self.datadir}/GraphImages')
-                plt.savefig(outpath, format="PNG")
-                return graph
-
-        elif len(self.nodeweight) == 1:
-            # if there is only one variable associated with each node (i.e. p16 expression)
-            # the data will be expressed as a variance in 'color' between each node in the graph
-            weight = nx.get_node_attributes(graph, 'weight')
-            # graph is displayed, saved, and returned as networkx.Graph object
-            nx.draw(graph, pos, node_color=list(weight.values()))
-
-            if path.exists(f'{self.datadir}/GraphImages'):
-                plt.savefig(outpath, format="PNG")
-                return graph
-            else:
-                mkdir(f'{self.datadir}/GraphImages')
-                plt.savefig(outpath, format="PNG")
-                return graph
+                pass
 
         else:
-            pass
+            return graph
