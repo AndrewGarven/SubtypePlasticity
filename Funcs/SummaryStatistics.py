@@ -93,7 +93,6 @@ class HALOSummary:
                                                            'dual_negative': dual_negative}
 
         self.stain_data = dict(self.stain_data)
-        print(self.stain_data['211'])
 
     def plot_hist(self, save_image=False, image_dir=None):
 
