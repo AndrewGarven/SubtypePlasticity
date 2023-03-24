@@ -3,16 +3,15 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import torch
 from torch_geometric.data import Dataset
-from torch_geometric.loader import ClusterLoader
+from torch_geometric.loader import DataLoader
 
 
-
-class SubtypeSwitchingDataset(Dataset):
+class NuclearSubtypeDataset(Dataset):
 
     __metaclass__ = MakeGraph
 
     def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super(NuclearSubtypeDataset, self).__init__(root, transform, pre_transform, pre_filter)
 
     # create a generator object to retrieve filenames within a directory that have a certain filetype
     def retrieve_file_path(self, directory, filetype):
@@ -36,7 +35,7 @@ class SubtypeSwitchingDataset(Dataset):
         pass
 
     def process(self):
-        for matrix_file in self.retrieve_file_path(f'{self.root}/raw', 'csv'):
+        for idx, matrix_file in enumerate(self.retrieve_file_path(f'{self.root}/raw', 'csv')):
             graph = MakeGraph.MakeGraph(f'{self.root}/raw',
                                         matrix_file,
                                         ['Stain 1 Nucleus OD', 'Stain 2 Cytoplasm OD'],
@@ -49,16 +48,18 @@ class SubtypeSwitchingDataset(Dataset):
                 graph = self.pre_transform(graph)
 
             torch.save(graph,
-                       f'{self.root}/processed/graph_{matrix_file}.pt')
+                       f'{self.root}/processed/graph_{idx}.pt')
 
     def len(self):
         return len(self.processed_file_names)
 
-    def get(self, graph_file):
-        graph = torch.load(f'{self.root}/processed/graph_{graph_file}.pt')
+    def get(self, idx):
+        graph = torch.load(f'{self.root}/processed/graph_{idx}.pt')
         return graph
 
 
-dataset = SubtypeSwitchingDataset(root='~/PycharmProjects/SubtypePlasticity/Data')
-print(type(dataset))
-#test_graph = SubtypeSwitchingDataset(root='~/PycharmProjects/SubtypePlasticity/Data').get('123-12345')
+NuclearSubtypeDataset(root='/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data')
+
+x = DataLoader(NuclearSubtypeDataset(root='/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data'),
+               batch_size=2,
+               shuffle=True)
