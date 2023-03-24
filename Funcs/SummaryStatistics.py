@@ -19,6 +19,9 @@ class HALOSummary:
 
         :datadir: [str] of directory containing nuclear position data
         :filename: [str] of (.csv) file containing HALO image analysis output
+        :clinical: [str] of (.csv) file name [containing clinical data (including Subtype, Grade, etc)]
+                  - rows: Patients
+                  - columns: Clinical Features (ex. Subtype, Grade, etc)
         :stain1: [str] name of first stain (ex. 'Gata3')
         :stain2: [str] name of second stain (ex. 'Ck5')
         :loc1: [str] cellular staining location nuclear: 'nuclear' or 'n',
@@ -28,7 +31,7 @@ class HALOSummary:
 
         """
 
-    def __init__(self, datadir, file_name, stain1='stain1', stain2='stain2', loc1='n', loc2='n', anno=True):
+    def __init__(self, datadir, file_name, clinical, stain1='stain1', stain2='stain2', loc1='n', loc2='n', anno=True):
 
         # Initializing preprocessing class object
         # automatically generates a pandas dataframe
@@ -93,6 +96,10 @@ class HALOSummary:
                                                            'dual_negative': dual_negative}
 
         self.stain_data = dict(self.stain_data)
+        clinicaldf = pd.read_csv(f'{datadir}/{clinical}.csv',
+                                 index_col=0)
+        clinicalid = [x for x in list(self.stain_data.keys()) if x in clinicaldf.index.values.tolist()]
+        self.clinical = clinicaldf.loc[clinicalid, :]
 
     def plot_hist(self, save_image=False, image_dir=None):
 
@@ -138,10 +145,22 @@ class HALOSummary:
         else:
             plt.show()
 
+    def subtype(self):
 
-HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data',
+        """
+            subtype() generates ..........
+
+            :self: HALOSummary Object described above
+
+            :return: ...................
+        """
+        print(self.clinical[''])
+
+
+HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/PositionInputData',
             'TMA1_GATA3CK5_summary',
+            'NMIBC_clinical',
             stain1='Gata3',
             stain2='Ck5',
             loc1='n',
-            loc2='c')
+            loc2='c').subtype()

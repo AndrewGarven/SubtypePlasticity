@@ -5,7 +5,7 @@ import itertools
 import networkx as nx
 import matplotlib.pyplot as plt
 from math import sqrt
-from torch_geometric.utils import from_networkx
+from torch_geometric.utils import from_networkx, to_networkx
 
 
 class MakeGraph:
@@ -159,11 +159,3 @@ class MakeGraph:
             graph = from_networkx(graph)
 
         return graph
-
-
-matrix = MakeGraph('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data',
-                   'TESTER-tma',
-                   ['Stain 1 Nucleus OD', 'Stain 2 Cytoplasm OD'],
-                   100).graph(image=True,
-                              image_path='/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/GraphImages',
-                              torch_graph=True)
