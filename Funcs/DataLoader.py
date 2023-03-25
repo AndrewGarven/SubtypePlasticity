@@ -5,6 +5,7 @@ import json
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 import torch
 from torch_geometric.data import Dataset
+import torch_geometric.transforms as T
 
 
 class NuclearSubtypeDataset(Dataset):
@@ -34,8 +35,8 @@ class NuclearSubtypeDataset(Dataset):
 
     __metaclass__ = MakeGraph
 
-    def __init__(self, root, transform=None, pre_transform=None, pre_filter=None):
-        super(NuclearSubtypeDataset, self).__init__(root, transform, pre_transform, pre_filter)
+    def __init__(self, root, transform=None):
+        super(NuclearSubtypeDataset, self).__init__(root, transform)
 
     # create a generator object to retrieve filenames within a directory that have a certain filetype
     def retrieve_file_path(self, directory, filetype):
@@ -88,12 +89,6 @@ class NuclearSubtypeDataset(Dataset):
                                             ['Stain 1 Nucleus OD', 'Stain 2 Cytoplasm OD'],
                                             75).graph(torch_graph=True)
 
-                if self.pre_filter is not None and not self.pre_filter(graph):
-                    continue
-
-                if self.pre_transform is not None:
-                    graph = self.pre_transform(graph)
-
                 torch.save(graph,
                            f'{self.root}/processed/graph_{idx}.pt')
         conversion = dict(idx_id)
@@ -112,4 +107,12 @@ class NuclearSubtypeDataset(Dataset):
             :return: '.pt' file saved in 'root/processed/*.pt'
         """
         graph = torch.load(f'{self.root}/processed/graph_{idx}.pt')
+
         return graph
+
+
+transformations = T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])
+
+example_graph = NuclearSubtypeDataset(root='/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data',
+                                      transform=T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])).get(0)
+print(example_graph)
