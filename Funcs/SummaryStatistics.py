@@ -3,7 +3,6 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 
-
 class HALOSummary:
 
     """HALOSummary is used to generate a summary data from a HALO image analysis software output .csv file
@@ -139,107 +138,84 @@ class HALOSummary:
         else:
             plt.show()
 
-    def get_data(self, property, strata_names):
+    def get_data(self, attribute: str, group_names: list):
 
-        if not isinstance(property, str):
-            print('ERROR: property must be of type string')
-        if not isinstance(strata_names, list):
-            print('ERROR: strata must be of type str')
+        """
+            get_data() retrieves cell type (stratified by group) data from HALO tma summary dataframe
 
-        intid = list(dict.fromkeys(self.df['Spot Id 1'].values.tolist()))
-        strid = [int(x) for x in intid if str(x) != 'nan' and int(x) not in [868, 17, 220, 314, 8, 666]]
-        property_df = self.clinical.loc[strid, property]
+            :self: HALOSummary Object described above
+            :attribute: [str] column name within clinical dataframe that you want to subset (ex. 'tumor_recurrence')
+            :group_names: [list] of subgroups within :attribute: (ex. ['yes', 'no', 'maybe'])
 
-        patient_id_strata = {}
-        strata_cell_data = {}
+            :return: [dict] containing cell type data stratified by group
+        """
 
-        # initialize default dicts for up to 5 strata
-        for i, name in enumerate(strata_names):
-            stratified_patient_id = property_df[property_df == name].index.values.tolist()
-            patient_id_strata[name] = stratified_patient_id
+        int_id = list(dict.fromkeys(self.df['Spot Id 1'].values.tolist()))
+        strid = [int(x) for x in int_id if str(x) != 'nan' and int(x) not in [868, 17, 220, 314, 8, 666]]
+        property_df = self.clinical.loc[strid, attribute]
 
-        for name in patient_id_strata.keys():
-            for patient_id in patient_id_strata[name]:
+        group_ids = {}
+        cell_data = {}
+
+        for i, group in enumerate(group_names):
+            stratified_patient_id = property_df[property_df == group]
+            group_ids[group] = stratified_patient_id
+
+        for group in group_ids.keys():
+            for patient_id in group_ids[group].index.values.tolist():
                 if str(float(patient_id)) in self.stain_data.keys():
                     for i, stain in enumerate(list(self.stain_data[str(float(patient_id))].keys())):
 
                         stain_dict = self.stain_data[str(float(patient_id))][stain]
+                        if stain_dict['total_cells'] == 0:
+                            continue
+                        else:
+                            norm_gata3 = [int(x)/int(stain_dict['total_cells']) for x in stain_dict['Gata3']['score_count']]
+                            norm_ck5 = [int(x)/int(stain_dict['total_cells']) for x in stain_dict['Ck5']['score_count']]
+                            norm_dual_neg = [int(stain_dict['dual_negative'])/int(stain_dict['total_cells'])]
+                            norm_dual_pos = [int(stain_dict['dual_positive'])/int(stain_dict['total_cells'])]
 
-                        norm_gata3 = [int(x) / int(stain_dict['total_cells']) for x in stain_dict['Gata3']['score_count']]
-                        norm_Ck5 = [int(x) / int(stain_dict['total_cells']) for x in stain_dict['Ck5']['score_count']]
-                        norm_dual_neg = [int(stain_dict['dual_negative']) / int(stain_dict['total_cells'])]
-                        norm_dual_pos = [int(stain_dict['dual_positive']) / int(stain_dict['total_cells'])]
+                            cell_data[str(patient_id) + '-' + stain] = norm_gata3+norm_ck5+norm_dual_neg+norm_dual_pos
+        return cell_data
 
-                        strata_cell_data[str(patient_id) + '-' + stain] = norm_gata3 +\
-                                                                          norm_Ck5 +\
-                                                                          norm_dual_neg +\
-                                                                          norm_dual_pos
-        return strata_cell_data
-
-
-    def subtype(self):
-
+    def plot_compare(self, attribute: str, group_names: list):
         """
-            subtype() generates ..........
+            plot_compare() generates a matplotlib.pyplot.bar() graph object from HALO TMA summary data for each group
+            within 'group_names'
 
             :self: HALOSummary Object described above
+            :attribute: [str] column name within clinical dataframe that you want to subset (ex. 'tumor_recurrence')
+            :group_names: [list] of subgroups within :attribute: (ex. ['yes', 'no', 'maybe'])
 
-            :return: ...................
-        """
-        print(self.clinical[''])
-
-    def Grade(self, property, strata_names):
-        """
-            Grade() generates ..........
-
-            :self: HALOSummary Object described above
-
-            :return: ...................
+            :return: (display) matplotlib.pyplot.bar() graph for each group
         """
 
-        strata_cell_data = self.get_data(property=property, strata_names=strata_names)
-        strata_cell_dict = {}
-        for strata in strata_cell_data.keys():
-            strata_cell_dict[strata] = pd.DataFrame(dict(strata_cell_dict[strata]), index=['Gata3-1',
-                                                                                           'Gata3-2',
-                                                                                           'Gata3-3',
-                                                                                           'Ck5-1',
-                                                                                           'Ck5-2',
-                                                                                           'Ck5-3',
-                                                                                           'double negative',
-                                                                                           'double positive'])
+        cell_data = self.get_data(attribute=attribute, group_names=group_names)
+        cell_data_dict = {}
 
-            plt.bar(x=[1, 2, 3, 4, 5, 6, 7, 8], height=(strata_cell_dict[strata].mean(axis=1) * 100), color=['limegreen',
-                                                                                                             'green',
-                                                                                                             'darkgreen',
-                                                                                                             'blue',
-                                                                                                             'mediumblue',
-                                                                                                             'darkblue',
-                                                                                                             'white',
-                                                                                                             'black'])
-            plt.title('With Recurrences Cell Type Average')
-            plt.xticks([1, 2, 3, 4, 5, 6, 7, 8],
-                       labels=['Gata3-1',
-                               'Gata3-2',
-                               'Gata3-3',
-                               'Ck5-1',
-                               'Ck5-2',
-                               'Ck5-3',
-                               'double negative',
-                               'double positive'])
+        index_labels = ['Gata3-1', 'Gata3-2', 'Gata3-3', 'Ck5-1', 'Ck5-2', 'Ck5-3', 'dual negative', 'dual positive']
+        color_spectrum = ['limegreen', 'green', 'darkgreen', 'blue', 'mediumblue', 'darkblue', 'white', 'black']
+        x = [1, 2, 3, 4, 5, 6, 7, 8]
+        for group in cell_data.keys():
+            cell_data_dict[group] = pd.DataFrame(cell_data[group], index=index_labels)
+            plt.bar(x=x,
+                    height=(cell_data_dict[group].mean(axis=1) * 100),
+                    color=color_spectrum)
+            plt.title(f'Cell Type Breakdown Stratified by {attribute}')
+            plt.xticks(x, labels=index_labels)
             plt.xlabel('Cell Type')
-            plt.xlabel('Percentage Cell Count')
+            plt.ylabel('Percentage Cell Count')
             plt.show()
 
-        return strata_cell_dict
+        return cell_data_dict
 
 
 low1 = HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/PositionInputData',
-            'TMA1_GATA3CK5_summary',
-            'NMIBC_clinical',
-            stain1='Gata3',
-            stain2='Ck5',
-            loc1='n',
-            loc2='c').Grade('Grade_1.x', ['1', '2'])
+                   'TMA1_GATA3CK5_summary',
+                   'NMIBC_clinical',
+                   stain1='Gata3',
+                   stain2='Ck5',
+                   loc1='n',
+                   loc2='c').plot_compare('Grade_1.x', [1, 2])
 
-print(low1)
+
