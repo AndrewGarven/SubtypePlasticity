@@ -3,6 +3,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 
+
 class HALOSummary:
 
     """HALOSummary is used to generate a summary data from a HALO image analysis software output .csv file
@@ -54,13 +55,11 @@ class HALOSummary:
             core_id = tma[6]
             total_cells = tma[16]
 
-            stain1_0 = tma[18]
             stain1_1 = tma[19]
             stain1_2 = tma[20]
             stain1_3 = tma[21]
             stain1_h_score = tma[34]
 
-            stain2_0 = tma[23]
             stain2_1 = tma[24]
             stain2_2 = tma[25]
             stain2_3 = tma[26]
@@ -80,14 +79,12 @@ class HALOSummary:
                 stain2_optical_density = tma[44]
 
             self.stain_data[f'{spot_id}'][f'{core_id}'] = {'total_cells': total_cells,
-                                                           self.stain1: {'score_count': [stain1_0,
-                                                                                         stain1_1,
+                                                           self.stain1: {'score_count': [stain1_1,
                                                                                          stain1_2,
                                                                                          stain1_3],
                                                                          'h_score': stain1_h_score,
                                                                          'optical_density': stain1_optical_density},
-                                                           self.stain2: {'score_count': [stain2_0,
-                                                                                         stain2_1,
+                                                           self.stain2: {'score_count': [stain2_1,
                                                                                          stain2_2,
                                                                                          stain2_3],
                                                                          'h_score': stain2_h_score,
@@ -96,10 +93,7 @@ class HALOSummary:
                                                            'dual_negative': dual_negative}
 
         self.stain_data = dict(self.stain_data)
-        clinicaldf = pd.read_csv(f'{datadir}/{clinical}.csv',
-                                 index_col=0)
-        clinicalid = [x for x in list(self.stain_data.keys()) if x in clinicaldf.index.values.tolist()]
-        self.clinical = clinicaldf.loc[clinicalid, :]
+        self.clinical = pd.read_csv(f'{datadir}/{clinical}.csv', index_col='Sample_ID')
 
     def plot_hist(self, save_image=False, image_dir=None):
 
@@ -123,9 +117,9 @@ class HALOSummary:
             patient_stain1 = []
             patient_stain2 = []
             for tma in list(self.stain_data[patient].keys()):
-                od1 = self.stain_data[patient][tma][self.stain1]['optical_density']
+                od1 = self.stain_data[int(patient)][tma][self.stain1]['optical_density']
                 patient_stain1.append(od1)
-                od2 = self.stain_data[patient][tma][self.stain2]['optical_density']
+                od2 = self.stain_data[int(patient)][tma][self.stain2]['optical_density']
                 patient_stain2.append(od2)
             stain_1.extend(patient_stain1)
             stain_2.extend(patient_stain2)
@@ -145,6 +139,44 @@ class HALOSummary:
         else:
             plt.show()
 
+    def get_data(self, property, strata_names):
+
+        if not isinstance(property, str):
+            print('ERROR: property must be of type string')
+        if not isinstance(strata_names, list):
+            print('ERROR: strata must be of type str')
+
+        intid = list(dict.fromkeys(self.df['Spot Id 1'].values.tolist()))
+        strid = [int(x) for x in intid if str(x) != 'nan' and int(x) not in [868, 17, 220, 314, 8, 666]]
+        property_df = self.clinical.loc[strid, property]
+
+        patient_id_strata = {}
+        strata_cell_data = {}
+
+        # initialize default dicts for up to 5 strata
+        for i, name in enumerate(strata_names):
+            stratified_patient_id = property_df[property_df == name].index.values.tolist()
+            patient_id_strata[name] = stratified_patient_id
+
+        for name in patient_id_strata.keys():
+            for patient_id in patient_id_strata[name]:
+                if str(float(patient_id)) in self.stain_data.keys():
+                    for i, stain in enumerate(list(self.stain_data[str(float(patient_id))].keys())):
+
+                        stain_dict = self.stain_data[str(float(patient_id))][stain]
+
+                        norm_gata3 = [int(x) / int(stain_dict['total_cells']) for x in stain_dict['Gata3']['score_count']]
+                        norm_Ck5 = [int(x) / int(stain_dict['total_cells']) for x in stain_dict['Ck5']['score_count']]
+                        norm_dual_neg = [int(stain_dict['dual_negative']) / int(stain_dict['total_cells'])]
+                        norm_dual_pos = [int(stain_dict['dual_positive']) / int(stain_dict['total_cells'])]
+
+                        strata_cell_data[str(patient_id) + '-' + stain] = norm_gata3 +\
+                                                                          norm_Ck5 +\
+                                                                          norm_dual_neg +\
+                                                                          norm_dual_pos
+        return strata_cell_data
+
+
     def subtype(self):
 
         """
@@ -156,11 +188,58 @@ class HALOSummary:
         """
         print(self.clinical[''])
 
+    def Grade(self, property, strata_names):
+        """
+            Grade() generates ..........
 
-HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/PositionInputData',
+            :self: HALOSummary Object described above
+
+            :return: ...................
+        """
+
+        strata_cell_data = self.get_data(property=property, strata_names=strata_names)
+        strata_cell_dict = {}
+        for strata in strata_cell_data.keys():
+            strata_cell_dict[strata] = pd.DataFrame(dict(strata_cell_dict[strata]), index=['Gata3-1',
+                                                                                           'Gata3-2',
+                                                                                           'Gata3-3',
+                                                                                           'Ck5-1',
+                                                                                           'Ck5-2',
+                                                                                           'Ck5-3',
+                                                                                           'double negative',
+                                                                                           'double positive'])
+
+            plt.bar(x=[1, 2, 3, 4, 5, 6, 7, 8], height=(strata_cell_dict[strata].mean(axis=1) * 100), color=['limegreen',
+                                                                                                             'green',
+                                                                                                             'darkgreen',
+                                                                                                             'blue',
+                                                                                                             'mediumblue',
+                                                                                                             'darkblue',
+                                                                                                             'white',
+                                                                                                             'black'])
+            plt.title('With Recurrences Cell Type Average')
+            plt.xticks([1, 2, 3, 4, 5, 6, 7, 8],
+                       labels=['Gata3-1',
+                               'Gata3-2',
+                               'Gata3-3',
+                               'Ck5-1',
+                               'Ck5-2',
+                               'Ck5-3',
+                               'double negative',
+                               'double positive'])
+            plt.xlabel('Cell Type')
+            plt.xlabel('Percentage Cell Count')
+            plt.show()
+
+        return strata_cell_dict
+
+
+low1 = HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/PositionInputData',
             'TMA1_GATA3CK5_summary',
             'NMIBC_clinical',
             stain1='Gata3',
             stain2='Ck5',
             loc1='n',
-            loc2='c').subtype()
+            loc2='c').Grade('Grade_1.x', ['1', '2'])
+
+print(low1)
