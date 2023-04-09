@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 
 class HALOSummary:
-
     """HALOSummary is used to generate a summary data from a HALO image analysis software output .csv file
 
         Typical use:
@@ -151,32 +150,40 @@ class HALOSummary:
         """
 
         int_id = list(dict.fromkeys(self.df['Spot Id 1'].values.tolist()))
-        strid = [int(x) for x in int_id if str(x) != 'nan' and int(x) not in [868, 17, 220, 314, 8, 666]]
+        strid = [int(x) for x in int_id if str(x) != 'nan' and x in self.clinical.index.values.tolist()]
         property_df = self.clinical.loc[strid, attribute]
 
-        group_ids = {}
-        cell_data = {}
+        group_ids = defaultdict(dict)
+        cell_data = defaultdict(dict)
 
-        for i, group in enumerate(group_names):
-            stratified_patient_id = property_df[property_df == group]
-            group_ids[group] = stratified_patient_id
+        for group in group_names:
+            stratified_patient_id = property_df[property_df == group].index.values.tolist()
+            for patient_id in stratified_patient_id:
+                group_ids[group][patient_id] = []
+                cell_data[group][patient_id] = []
 
         for group in group_ids.keys():
-            for patient_id in group_ids[group].index.values.tolist():
+            for patient_id in group_ids[group].keys():
                 if str(float(patient_id)) in self.stain_data.keys():
                     for i, stain in enumerate(list(self.stain_data[str(float(patient_id))].keys())):
-
                         stain_dict = self.stain_data[str(float(patient_id))][stain]
                         if stain_dict['total_cells'] == 0:
                             continue
                         else:
-                            norm_gata3 = [int(x)/int(stain_dict['total_cells']) for x in stain_dict['Gata3']['score_count']]
-                            norm_ck5 = [int(x)/int(stain_dict['total_cells']) for x in stain_dict['Ck5']['score_count']]
-                            norm_dual_neg = [int(stain_dict['dual_negative'])/int(stain_dict['total_cells'])]
-                            norm_dual_pos = [int(stain_dict['dual_positive'])/int(stain_dict['total_cells'])]
+                            norm_gata3 = [int(x) / int(stain_dict['total_cells']) for x in
+                                          stain_dict['Gata3']['score_count']]
+                            norm_ck5 = [int(x) / int(stain_dict['total_cells']) for x in
+                                        stain_dict['Ck5']['score_count']]
+                            norm_dual_neg = [int(stain_dict['dual_negative']) / int(stain_dict['total_cells'])]
+                            norm_dual_pos = [int(stain_dict['dual_positive']) / int(stain_dict['total_cells'])]
 
-                            cell_data[str(patient_id) + '-' + stain] = norm_gata3+norm_ck5+norm_dual_neg+norm_dual_pos
-        return cell_data
+                            cell_data[group][patient_id] = [*norm_gata3,
+                                                            *norm_ck5,
+                                                            *norm_dual_neg,
+                                                            *norm_dual_pos]
+        for group in cell_data.keys():
+            cell_data[group] = {k: v for k, v in dict(cell_data[group]).items() if v}
+        return dict(cell_data)
 
     def plot_compare(self, attribute: str, group_names: list):
         """
@@ -201,7 +208,7 @@ class HALOSummary:
             plt.bar(x=x,
                     height=(cell_data_dict[group].mean(axis=1) * 100),
                     color=color_spectrum)
-            plt.title(f'Cell Type Breakdown Stratified by {attribute}')
+            plt.title(f'Cell Type Breakdown Stratified by {attribute} (group: {group})')
             plt.xticks(x, labels=index_labels)
             plt.xlabel('Cell Type')
             plt.ylabel('Percentage Cell Count')
@@ -212,10 +219,8 @@ class HALOSummary:
 
 low1 = HALOSummary('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/PositionInputData',
                    'TMA1_GATA3CK5_summary',
-                   'NMIBC_clinical',
+                   'subtyping_nmibc',
                    stain1='Gata3',
                    stain2='Ck5',
                    loc1='n',
-                   loc2='c').plot_compare('Grade_1.x', [1, 2])
-
-
+                   loc2='c').plot_compare('Subtype', ['URO-KRT5+', 'Genomically Unstable', 'Urothelial-like', 'Basal', ])

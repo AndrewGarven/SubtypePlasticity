@@ -5,7 +5,7 @@ import itertools
 import networkx as nx
 import matplotlib.pyplot as plt
 from math import sqrt
-from torch_geometric.utils import from_networkx, to_networkx
+from torch_geometric.utils import from_networkx
 
 
 class MakeGraph:
@@ -93,18 +93,18 @@ class MakeGraph:
         else:
             stains = self.df[self.node_weight[0]].values.tolist()
 
-        nodeids = self.df.index.values.tolist()
-        nodedata = zip(nodeids, stains, positions)
+        node = self.df.index.values.tolist()
+        node_data = zip(node, stains, positions)
 
         nodes = []
 
-        for nodeid, stain, position in nodedata:
+        for node_id, stain, position in node_data:
             weight1 = stain[0]
             if self.node_feature_count == 2:
                 weight2 = stain[1]
-                node = (str(nodeid), {'weight': weight1, 'size': weight2, 'pos': (int(position[0]), int(position[1]))})
+                node = (str(node_id), {'weight': weight1, 'size': weight2, 'pos': (int(position[0]), int(position[1]))})
             else:
-                node = (str(nodeid), {'weight': weight1, 'pos': (int(position[0]), int(position[1]))})
+                node = (str(node_id), {'weight': weight1, 'pos': (int(position[0]), int(position[1]))})
             nodes.append(node)
 
         return nodes

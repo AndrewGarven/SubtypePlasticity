@@ -115,4 +115,3 @@ transformations = T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])
 
 example_graph = NuclearSubtypeDataset(root='/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data',
                                       transform=T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])).get(0)
-print(example_graph)
