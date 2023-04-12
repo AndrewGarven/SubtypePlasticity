@@ -3,6 +3,7 @@ import pandas as pd
 from sklearn.decomposition import PCA
 import matplotlib.lines as mlines
 import matplotlib.pyplot as plt
+from scipy.stats import pearsonr
 
 
 class RNASeqExplore:
@@ -46,11 +47,11 @@ class RNASeqExplore:
     def make_legend(self, label):
 
         label_conv = {
-            'Basal': 'x',
-            'Luminal papillary': 'o',
-            'Luminal': '^',
-            'Luminal_infiltrated': 's',
-            'Neuronal': '.'
+            'Ba/Sq': 'x',
+            'Stroma-rich': 'o',
+            'LumP': '^',
+            'LumU': 's',
+            'LumNS': '.'
         }
 
         lab_legend = mlines.Line2D([], [], color='black',
@@ -62,7 +63,8 @@ class RNASeqExplore:
         return lab_legend
 
     def plot_pca(self, gene, subtype_col=None, subtype_names=None):
-
+        self.rna.columns = self.rna.columns.astype(str)
+        self.rna.index = self.rna.index.astype(str)
         pca = PCA(n_components=2)
         pca_transformed = pca.fit_transform(self.rna.transpose())
         gray = plt.get_cmap('gray')
@@ -78,11 +80,11 @@ class RNASeqExplore:
             }
 
             label_dict = {
-                0.0: 'Basal',
-                1.0: 'Luminal papillary',
-                2.0: 'Luminal',
-                3.0: 'Luminal infiltrated',
-                4.0: 'Neuronal'
+                0.0: 'Ba/Sq',
+                1.0: 'Stroma-rich',
+                2.0: 'LumP',
+                3.0: 'LumU',
+                4.0: 'LumNS'
             }
             self.get_subset(subtype_col, subtype_names)
             rna = self.rna.dropna(axis='columns')
@@ -103,21 +105,34 @@ class RNASeqExplore:
             plt.xlabel('component 1')
             plt.ylabel('component 2')
 
-        handle = [self.make_legend('Basal'),
-                  self.make_legend('Luminal papillary'),
-                  self.make_legend('Luminal'),
-                  self.make_legend('Luminal_infiltrated'),
-                  self.make_legend('Neuronal')]
+        handle = [self.make_legend('Ba/Sq'),
+                  self.make_legend('Stroma-rich'),
+                  self.make_legend('LumP'),
+                  self.make_legend('LumU'),
+                  self.make_legend('LumNS')]
 
         plt.legend(loc='best', handles=handle)
         plt.show()
 
+    def compare_genes(self, gene1, gene2):
+        g1 = self.rna.loc[gene1, :]
+        g2 = self.rna.loc[gene2, :]
+        r, pval = pearsonr(g1, g2)
+        print(f'pearson correlation coeff: {r}, p_value: {pval}')
+        g1.hist()
+        plt.show()
+
+
 RNASeqExplore('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/RNAseq',
-                    'TCGA-VST-TumourOnlyGENE',
-                    'TCGA-clinicaldata',).plot_pca(gene='ENSG00000205420.11',
-                                                   subtype_col='paper_mRNA.cluster',
-                                                   subtype_names=['Basal_squamous',
-                                                                  'Luminal_papillary',
-                                                                  'Luminal',
-                                                                  'Luminal_infiltrated',
-                                                                  'Neuronal'])
+              'UROMOL-GENE-VST-subtypeswitch',
+              'UROMOL-HistoPath',).plot_pca(gene='ENSG00000205420',
+                                            subtype_col='MIBC consensus class',
+                                            subtype_names=['Ba/Sq',
+                                                           'Stroma-rich',
+                                                           'LumP',
+                                                           'LumU',
+                                                           'LumNS'])
+
+RNASeqExplore('/Users/andrewgarven/PycharmProjects/SubtypePlasticity/Data/RNAseq',
+              'UROMOL-GENE-VST-subtypeswitch',
+              'UROMOL-HistoPath',).compare_genes('ENSG00000100644', 'ENSG00000186081')
